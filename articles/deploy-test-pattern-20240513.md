@@ -3,7 +3,7 @@ title: "アプリケーションのデプロイとテスト戦略の種類"
 emoji: "👏"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["GoogleCloud", "Test", "Deploy"]
-published: false
+published: true
 ---
 
 # はじめに
