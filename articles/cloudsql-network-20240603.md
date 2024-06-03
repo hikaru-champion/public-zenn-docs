@@ -3,7 +3,7 @@ title: "Cloud SQLのネットワークと接続方法"
 emoji: "🎉"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["GoogleCloud", "CloudSQL"]
-published: false
+published: true
 ---
 # はじめに
 こんにちは。hikaruです。
