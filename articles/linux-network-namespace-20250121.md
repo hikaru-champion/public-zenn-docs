@@ -117,7 +117,7 @@ Error: ipv4: FIB table does not exist.
 Dump terminated
 ```
 出力内容を確認すると、IPアドレス、MACアドレス、ルートテーブルともに設定がされていないことがわかります。
-また、network namespaceを使用しないで、IPアドレスを確認するコマンドを実行すると、出力内容が大きく違っていることがわかります。
+また、network namespaceを使用しない(Linuxホスト環境上)で、IPアドレスを確認するコマンドを実行すると、出力内容が大きく違っていることがわかります。
 ※以下の出力結果は実行環境によって異なります。
 
 ```bash
@@ -149,7 +149,7 @@ $ ip address show
     inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
        valid_lft forever preferred_lft forever
 ```
-このことから、network namespaceを使用することで、ネットワーク的に独立した環境をLinux内に作り出すことができます。
+このことから、network namespaceを使用することで、ネットワーク的に独立した環境をLinuxホスト内に作り出すことができます。
 network namespaceを削除したい場合は、**ip netns delete**コマンドを実行することで削除することができます。
 
 ```bash
@@ -158,6 +158,7 @@ $ ip netns list
 ```
 
 ## network namespace同士の接続
+network namespace (ns01 と ns02)同士の接続を行い、疎通ができるか試してみたいと思います。
 
 network namespace (ns01 と ns02)を作成していきます。
 ```bash
@@ -170,9 +171,11 @@ ns01
 この時のnetwork namespaceのns01とns02はそれぞれ独立したネットワークとなっており、
 IPアドレスや、ルーティングテーブルも別々に持っていることになります。
 
+
+
 このns01とns02を接続させるためには、**veth (Virtual Ethernet Device)**という仮想ネットワークインターフェースを
 作成する必要があります。
-**ip link add **コマンドを実行することで、仮想ネットワークインターフェースを作成することができます。
+**ip link add** コマンドを実行することで、仮想ネットワークインターフェースを作成することができます。
 作成した仮想ネットワークインターフェースは、2つのネットワークインターフェースがペアになっており、
 1本のLANケーブルで接続された状態になっていると言えます。
 ```bash
@@ -190,6 +193,8 @@ whikaru9@ubuntu:~$ sudo ip link set ns02-veth0 netns ns02
 
 上記のコマンドを実行した後は、Linuxシステム上からは先ほど確認できた仮想ネットワークインターフェースは確認できなくなり、
 ns01とns02のnetwork namespace上にそれぞれ仮想ネットワークインターフェースが移動していることが確認することができました。
+
+
 
 ```bash
 whikaru9@ubuntu:~$ ip link show | grep veth
@@ -249,6 +254,8 @@ whikaru9@ubuntu:~$ sudo ip netns exec ns02 ip link show ns02-veth0 | grep state
 - IPアドレスも付与
 することができているので、pingコマンドを実行して疎通することができるか確認してみます。
 
+
+
 ```bash
 whikaru9@ubuntu:~$ sudo ip netns exec ns01 ping -c 3 192.168.0.2
 PING 192.168.0.2 (192.168.0.2) 56(84) bytes of data.
@@ -263,6 +270,120 @@ rtt min/avg/max/mdev = 0.074/0.109/0.170/0.043 ms
 ```
 無事、ns01からns02へ疎通することができました。
 
+## ルータを経由した通信
+次は、ルータを経由した疎通の確認を行っていきます。
+自身のネットワークセグメントを超えた通信を行う場合は、ルータが必要になります。
+今回はルータを新規に作成し、ネットワークセグメントを超えた通信を行っていきます。
+まずは、先ほどの検証で作成したnetwork namespaceを以下のコマンドで削除していきます。
+
+```bash
+$ sudo ip --all netns delete
+$ ip netns list
+```
+
+削除が完了したら、network namespace (ns01/s02/router01/router02)を作成していきます。
+router01とrouter02は今回新規に作成するルータ用のnetwork namespaceです。
+
+```bash
+whikaru9@ubuntu:~$ sudo ip netns add ns01
+whikaru9@ubuntu:~$ sudo ip netns add ns02
+whikaru9@ubuntu:~$ sudo ip netns add router01
+whikaru9@ubuntu:~$ sudo ip netns add router02
+whikaru9@ubuntu:~$ ip netns list
+router02
+router01
+ns02
+ns01
+```
+
+次に、仮想ネットワークインターフェースを作成していきます。
+今回は、以下の三つの仮想ネットワークインターフェースが必要になります。
+- ns01とrouter01をつなぐ仮想ネットワークインターフェース
+- router01とrouter02をつなぐ仮想ネットワークインターフェース
+- ns02とrouter02をつなぐ仮想ネットワークインターフェース
+
+```bash
+whikaru9@ubuntu:~$ sudo ip link add ns01-veth0 type veth peer name gw01-veth0
+whikaru9@ubuntu:~$ sudo ip link add gw01-veth1 type veth peer name gw02-veth0
+whikaru9@ubuntu:~$ sudo ip link add gw02-veth1 type veth peer name ns02-veth0
+```
+
+次に、作成した仮想ネットワークインターフェースを各network namespaceに所属させます。
+
+```bash
+whikaru9@ubuntu:~$ sudo ip link set ns01-veth0 netns ns01
+whikaru9@ubuntu:~$ sudo ip link set gw01-veth0 netns router01
+whikaru9@ubuntu:~$ sudo ip link set gw01-veth1 netns router01
+whikaru9@ubuntu:~$ sudo ip link set gw02-veth0 netns router02
+whikaru9@ubuntu:~$ sudo ip link set gw02-veth1 netns router02
+whikaru9@ubuntu:~$ sudo ip link set ns02-veth0 netns ns02
+```
+
+次に、仮想ネットワークインターフェースを有効（UP）なステータスに変更します。
+
+```bash
+whikaru9@ubuntu:~$ sudo ip netns exec ns01 ip link set ns01-veth0 up
+whikaru9@ubuntu:~$ sudo ip netns exec router01 ip link set gw01-veth0 up
+whikaru9@ubuntu:~$ sudo ip netns exec router01 ip link set gw01-veth1 up
+whikaru9@ubuntu:~$ sudo ip netns exec router02 ip link set gw02-veth0 up
+whikaru9@ubuntu:~$ sudo ip netns exec router02 ip link set gw02-veth1 up
+whikaru9@ubuntu:~$ sudo ip netns exec ns02 ip link set ns02-veth0 up
+```
+
+次に、仮想ネットワークインターフェースに対して、IPアドレスを設定していきます。
+
+```bash
+$ sudo ip netns exec ns01 ip address add 192.168.0.1/24 dev ns01-veth0
+$ sudo ip netns exec router01 ip address add 192.168.0.254/24 dev gw01-veth0
+$ sudo ip netns exec router01 ip address add 172.16.0.1/24 dev gw01-veth1
+$ sudo ip netns exec router02 ip address add 172.16.0.2/24 dev gw02-veth0
+$ sudo ip netns exec router02 ip address add 10.0.0.254/24 dev gw02-veth1
+$ sudo ip netns exec ns02 ip address add 10.0.0.1/24 dev ns02-veth0
+```
+
+次に、各network namespaceにルーティングテーブルを追加していきます。
+現状の、ns01のルーティングテーブルには、同じネットワークセグメントへのルーティングテーブルしかなく、
+ns02へ通信したい場合は、どのルーティングテーブルにも一致しないため、パケットの行き先がわからずエラーになってしまいます。
+
+
+```bash
+$ sudo ip netns exec ns01 ip route show
+192.168.0.0/24 dev ns01-veth0 proto kernel scope link src 192.168.0.1
+```
+
+そのため、ns01とns02ともにデフォルトルートというほかの宛先に一致しない場合に使用されるルーティングテーブルを追加します。
+
+```bash
+whikaru9@ubuntu:~$ sudo ip netns exec ns01 ip route add default via 192.168.0.254
+whikaru9@ubuntu:~$ sudo ip netns exec ns02 ip route add default via 10.0.0.254
+```
+
+しかし、これでは足りません。
+現状の、router01のルーティングテーブルとrouter02のルーティングテーブルにも、ns01、ns02へ通信したい場合は、
+どのルーティングテーブルにも一致しないため、パケットの行き先がわからずエラーになってしまいます。
+そのため、router01とrouter02には、ns01とns02のネットワークセグメント宛のルーティングテーブルを追加します。
+
+```bash
+$ sudo ip netns exec router01 ip route add 10.0.0.0/24 via 172.16.0.2
+$ sudo ip netns exec router02 ip route add 192.168.0.0/24 via 172.16.0.1
+```
+
+これで、準備が整いましたので、ns01からns02へ疎通を行っていきます。
+```bash
+$ sudo ip netns exec ns01 ping -c 3 10.0.0.1 -I 192.168.0.1
+PING 10.0.0.1 (10.0.0.1) from 192.168.0.1 : 56(84) bytes of data.
+64 bytes from 10.0.0.1: icmp_seq=1 ttl=62 time=0.078 ms
+64 bytes from 10.0.0.1: icmp_seq=2 ttl=62 time=0.087 ms
+64 bytes from 10.0.0.1: icmp_seq=3 ttl=62 time=0.083 ms
+
+--- 10.0.0.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2041ms
+rtt min/avg/max/mdev = 0.078/0.082/0.087/0.003 ms
+```
+無事、ns01からns02へ疎通することができました。
+
 
 # 参考文献
 https://container-security.dev/namespace/
+
+https://www.amazon.co.jp/Linux%E3%81%A7%E5%8B%95%E3%81%8B%E3%81%97%E3%81%AA%E3%81%8C%E3%82%89%E5%AD%A6%E3%81%B6TCP-IP%E3%83%8D%E3%83%83%E3%83%88%E3%83%AF%E3%83%BC%E3%82%AF%E5%85%A5%E9%96%80-%E3%82%82%E3%81%BF%E3%81%98%E3%81%82%E3%82%81-ebook/dp/B085BG8CH5
