@@ -1,9 +1,9 @@
 ---
-title: ""
+title: "【Docker再入門】～Dockerデータ管理偏～"
 emoji: "📌"
 type: "tech" # tech: 技術記事 / idea: アイデア
-topics: []
-published: false
+topics: ["コンテナ", "Docker"]
+published: true
 ---
 # はじめに
 こんにちは。championです。
@@ -88,7 +88,7 @@ $ docker volume inspect vm1
 ]
 ```
 
-ボリュームを作成すると、ホスト側の**/var/lib/docker/volumes**ディレクトリ配下に新たに**vm1**ディレクトリが作成され、このディレクトリとコンテナ内がマウントされます。
+ボリュームを作成すると、ホスト側の **/var/lib/docker/volumes** ディレクトリ配下に新たにvm1ディレクトリが作成され、このディレクトリとコンテナ内がマウントされます。
 ```bash
 $ sudo ls -ltr /var/lib/docker/volumes/vm1/
 total 0
@@ -101,7 +101,7 @@ $ docker container run -dit --name alpine-linux1 --mount type=volume,src=vm1,tar
 9d08bc94b020ffb145fb958249c6206e6a271cce095501db47534175dfe68ef5
 ```
 
-ボリュームマウントをしてコンテナを起動したあと、コンテナ内に入り、マウントしたディレクトリ配下で**test.txt**ファイルを作成し、コンテナから抜けます。その後、コンテナを停止・削除した後、再度ボリュームマウントをしてコンテナを起動し先ほど作成したファイルを確認すると無事に**test.txt**ファイルが確認できました。
+ボリュームマウントをしてコンテナを起動したあと、コンテナ内に入り、マウントしたディレクトリ配下で**test.txt**ファイルを作成し、コンテナから抜けます。その後、コンテナを停止・削除した後、再度ボリュームマウントをしてコンテナを起動し先ほど作成したファイルを確認すると**test.txt**ファイルが確認できました。
 ```bash
 $ docker container exec -it alpine-linux1 /bin/sh
 / # cd /home
@@ -134,7 +134,7 @@ total 0
 -rw-r--r--. 1 root root 0 Jan 31 21:26 test.txt
 ```
 
-![volume](/images/docker-network-20250202/docker-volume01.drawio.png)
+![volume](/images/docker-storage-20250202/docker-volume01.drawio.png)
 
 作成したボリュームは、**docker volume rm**コマンドを利用することで削除することができます。
 ```bash
@@ -172,14 +172,14 @@ text.txt
 Hello
 ```
 
-![volume](/images/docker-network-20250202/docker-bind01.drawio.png)
+![volume](/images/docker-storage-20250202/docker-bind01.drawio.png)
 
 ホストマシン上で作成したファイルがコンテナからも確認することができました。このようにbindマウントを使うとホストマシンの好きなディレクトリとコンテナを接続させることができます。
 
 
 ### tmpfs
 tmpfsマウントは、Linuxホストマシン上のメモリ空間上にマウントします。ホストマシン上の**メモリ**を利用するためアクセスは高速になりますが、コンテナを停止したり、ホストマシン上も停止や再起動をするとデータが消えてしまいます。
-tmpfsマウントさせるためには、**docker container run**コマンドに「--mount」オプションに**type=tmpfs**を指定します。**target**は、今回も**target=/home**としました。コンテナを起動後、コンテナ内で**df -h**コマンドを実行すると**/home**配下がtmpfsをマウントしていることがで確認できます。
+tmpfsマウントさせるためには、**docker container run**コマンドに「--mount」オプションに**type=tmpfs**を指定します。**target**は、今回も**target=/home**としました。コンテナを起動後、コンテナ内で**df -h**コマンドを実行すると **/home** 配下がtmpfsをマウントしていることがで確認できます。
 ```bash
 $ docker container run -dit --name alpine-linux1 --mount type=tmpfs,target=/home alpine
 c1ce74087a6284c6f2dafa849aaf1c562adb6353de2cbffc9226d56d72a5e9f4
