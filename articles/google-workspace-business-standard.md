@@ -3,23 +3,22 @@ title: "【個人利用】Google Workspace Business Standardの登録"
 emoji: "😎"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["GoogleWorkspace"]
-published: false
+published: true
 ---
 
 # はじめに
 こんにちは。championです。
 今回は個人利用でGoogle Workspaceを利用したく、Google Workspace Business Standardを契約したので、契約までに行ったことを記事にしたいと思います。
-普段は会社の都合上MSに支配されおり、Google Workspaceは利用していないのですが、前職ではGoogle Workspaceを利用していたことや、
-Gemini Advancedや他の生成AI機能が利用できることから個人でもGoogle Workspaceのアカウントが欲しくなり契約することにしました。
+普段は会社の都合上MSに支配されおり、Google Workspaceは利用していないのですが、前職ではGoogle Workspaceを利用していたことや、Gemini AdvancedやスプレッドシートやドキュメントでGeminiが利用できることから個人でもGoogle Workspaceのアカウントが欲しくなり契約することにしました。
 
 # Google Workspaceとは
 Google Workspaceとは、文字通りGoogleが提供しているビジネス向けのクラウド型生産性向上ツールです。
-企業の生産性向上、共同作業の促進、そしてセキュリティ強化を目的として設計された統合ソリューションであり、
-組織の規模や業種を問わず、多様なワークスタイルに対応することができます。
+企業の生産性向上、共同作業の促進、そしてセキュリティ強化を目的として設計された統合ソリューションであり、組織の規模や業種を問わず、多様なワークスタイルに対応することができます。
 
 ## 契約プランの選定
 Google Workspaceにはいくつか契約プランがあります。個人で利用する場合は【Business Starter】か【Business Standard】になるかと思います。
 ![](/images/google-workspace-business-standard/gws30.png)
+*契約プランの比較（公式引用）*
 
 私はGoogleドキュメントやスプレッドシート等のアプリケーションでもGeminiを利用してみたかったのとGoogleドライブのデータ保存量の大きさからStandardプランを選びました。
 各契約プランごとの詳細な比較については公式の資料を確認してください。
